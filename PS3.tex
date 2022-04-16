@@ -1,0 +1,121 @@
+
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+
+\usepackage[margin=1.1 in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{mathtools}   % loads »amsmath«
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{xcolor}
+\usepackage{cancel}
+%\usepackage{graphics}
+\usepackage{graphicx}
+%others
+\usepackage{enumerate}
+\usepackage{subcaption}
+
+
+
+\usepackage{apacite}
+\usepackage[round]{natbib}
+%\bibliographystyle{plainnat}
+\bibliographystyle{apacite}
+
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+
+\setlength{\parskip}{0.8em}
+\usepackage{setspace}
+%\singlespacing
+\spacing{1.25}
+
+
+
+\newtheorem{defin}{Definition.}
+\newtheorem{teo}{Theorem. }
+\newtheorem{lema}{Lemma. }
+\newtheorem{coro}{Corolary. }
+\newtheorem{prop}{Proposition. }
+\theoremstyle{definition}
+\newtheorem{examp}{Example. }
+\newtheorem{problem}{}
+
+\title{Metrics, PS3}
+\author{Giselle Labrador Badia}
+\date{March 2022}
+
+\begin{document}
+
+\maketitle
+
+ Tables with standards errors are provided for all regressions and other relevant analyses that I discuss. All the Stata code pertinent to this assignment is attached. 
+ 
+ \hspace{0.41cm} \textbf{Question 1.} See Stata log file. 
+ 
+ \hspace{0.41cm} \textbf{Question 2.} See Stata log file. 
+ 
+\begin{tabular}{lccccccc} \hline
+ & (1) & (2) & (3) & (4) & (5) & (6) & (7) \\ \hline
+ &  &  &  &  &  &  &  \\
+mlda\_21 & -3.150 & -9.293*** & 8.886*** & 5.755 & 5.755*** & 1.165 &  \\
+ & (1.975) & (1.323) & (2.328) & (4.764) & (1.669) & (2.990) &  \\
+placebo82 &  &  &  &  &  &  & 12.48* \\
+ &  &  &  &  &  &  & (6.980) \\
+Constant & 45.32*** & 62.77*** & 45.74*** & 57.52*** & 57.52*** & 56.98*** & 65.25*** \\
+ & (1.845) & (1.833) & (4.539) & (4.779) & (3.514) & (3.369) & (3.661) \\
+ &  &  &  &  &  &  &  \\
+Observations & 651 & 651 & 651 & 651 & 651 & 336 & 527 \\
+R-squared & 0.004 & 0.500 & 0.238 & 0.691 & 0.691 & 0.769 & 0.697 \\
+year FE & - & - & - & X & X & X & X \\
+state FE & - & X & X & X & X & X & X \\
+ cluster & - & - & - & X & - & - & X \\ \hline
+\multicolumn{8}{c}{ Robust standard errors in parentheses} \\
+\multicolumn{8}{c}{ *** p$<$0.01, ** p$<$0.05, * p$<$0.1} \\
+\end{tabular}
+
+  \hspace{0.41cm} \textbf{Question 3.} Table 1 column 1 displays the results of the naive regression. The coefficient of the treatment is negative and not significant. Also, this coefficient is not too useful, since it only represents the average treatment effect on the treated. Different states and different years should be analyzed separately since they differ in other ways not captured by the minimum drinking age. 
+  
+   \hspace{0.41cm} \textbf{Question 4.} Table 1 column 2 and column 3 displays the results of the regressions using fixed effects. The coefficient of interest for the regression with state FE is negative and significant. The coefficient of interest for the regression with the year FE is positive and significant. Similarly, these coefficients are problematic, since we only vary year or state. But the populations are still quite different for the other variable without FE. 
+  
+ 
+ \hspace{0.41cm} \textbf{Question 5.} In table 1 column 4 I show the average treatment effects (ATT) estimates with standard errors clustered by state, and with fixed effects in both state and year. The coefficient on the treatment is positive and not statistically significant. We are assuming two-way FE DiD, so this coefficient (5.7) can be interpreted as the effect in the number of death per 100000 people per year that raising the minimum wage to 21 have on the rate of traffic fatalities among drivers aged 18 to 20 years. If we cluster by state, we assume that prediction errors are not independent of the states.
+ 
+  \hspace{0.41cm} \textbf{Question 6.}  In table 1 column 5 I show the average treatment effects (ATT) estimates with standard errors not clustered by state, and with fixed effects in both state and year. The coefficient on the treatment is positive and statistically significant which are identical to the ones obtained when we cluster by state.  If we do not cluster by state, we assume that prediction errors are not independent of the states, hence the standards error gets smaller. But this standards errors are mischievously smaller since we are ignoring in this specification correlation year to year within years. 
+  
+  \hspace{0.41cm} \textbf{Question 7.} Table 1 column 6 displays the results omitting data after 1990. In this specification, the coefficient on the treatment falls considerably and it is not statistically significant. This indicates that the part of the sample that was dropped weights heavily in the previous estimators. That is, if you consider only a few years after the treatment year, the effect is not significant and it is very small. This makes the hypothesis look weak since many other factors could have caused a decrease in traffic fatalities many years after the law was in place. 
+ 
+ \hspace{0.41cm} \textbf{Question 8.}  Table 1 column 7 displays the results of performing the pre-program test. The coefficient on the placebo is positive with twice the magnitude of the previous exercises and statistically significant.  The result of this test can be interpreted as evidence of fundamental differences between the treated states and the always treated states that go beyond the treatment. For instance, if the treated states have a higher traffic fatality rate, which might have informed the law, the previous coefficients at not serious in reflecting the effect of the treatment. 
+ \begin{table}[]
+     \centering
+\begin{tabular}{lcccc} \hline
+ & (1) & (2) & (3) & (4) \\
+VARIABLES & rate18\_20ht & rate18\_20ht & rate18\_20ht & rate18\_20ht \\ \hline
+ &  &  &  &  \\
+mlda\_first &  &  & 3.757 & -10.10*** \\
+ &  &  & (3.014) & (2.232) \\
+mlda\_remaining &  &  & 8.472* & 0.576 \\
+ &  &  & (4.202) & (4.233) \\
+mlda\_21 & 7.652* & -1.006 &  &  \\
+ & (3.915) & (3.746) &  &  \\
+Constant & 56.87*** & 65.80*** & 64.52*** & 64.79*** \\
+ & (1.306) & (1.083) & (3.587) & (3.624) \\
+ &  &  &  &  \\
+Observations & 403 & 403 & 403 & 403 \\
+R-squared & 0.719 & 0.716 & 0.719 & 0.720 \\
+year FE & X & X & X & X \\
+state FE & X & X & X & X \\
+ cluster & X & X & X & X \\ \hline
+\multicolumn{5}{c}{ Robust standard errors in parentheses} \\
+\multicolumn{5}{c}{ *** p$<$0.01, ** p$<$0.05, * p$<$0.1} \\
+\end{tabular}
+ \end{table}
+ 
+\hspace{0.41cm} \textbf{Question 9.} Table 2, columns 1 and 2 display the results of the DiD regression of the voluntary states of Maryland and Michigan respectively. The estimated effect for Maryland is positive and statistically significant (column 1) and the estimated effect for Michigan is negative and not statistically significant (column 2). This confirms that the treatment effect if anything varies by state.
+  
+ \hspace{0.41cm} \textbf{Question 10.} Table 2, columns 3 and 4 display the results of the DiD regression using the dummy variable $mldm_first$ for the first years and $mlda_remaining$ for the rest of the years.  The estimated effect for Maryland is positive and statistically significant (column 3) only for the late periods, while the estimated effect for Michigan is negative and statistically significant only for the early periods(column 2). This result is not very encouraging, since the treatment effect is not constant over time. 
+ 
+
+\end{document}
