@@ -1,0 +1,25 @@
+	(1)
+VARIABLES	muslim*Client_Married
+	
+Treated	0.184
+	(0.139)
+Client_Age	-0.000273
+	(0.00840)
+Client_Married	0.187
+	(0.259)
+Client_Education	-0.0209
+	(0.0160)
+HH_Size	-0.0492
+	(0.0375)
+HH_Income	1.61e-05
+	(1.42e-05)
+muslim	0.188
+	(0.403)
+Hindu_SC_Kat	-0.105
+	(0.207)
+1.mus_married	-0.294
+	(0.431)
+Constant	-0.923
+	(0.471)
+	
+Standard errors in parentheses	

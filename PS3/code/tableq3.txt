@@ -1,0 +1,15 @@
+	(1)
+VARIABLES	question3
+	
+mlda_21	-3.150
+	(1.975)
+Constant	45.32***
+	(1.845)
+	
+Observations	651
+R-squared	0.004
+year FE	no
+state FE	No
+Cluster	No
+Robust standard errors in parentheses	
+*** p<0.01, ** p<0.05, * p<0.1	
