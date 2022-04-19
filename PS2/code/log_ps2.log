@@ -1,0 +1,1001 @@
+---------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/gisellelab/pCloud Drive/PHD/Courses/02 - Second Year/ECON 717
+>  (Metrics)/Problem Sets/Problem Set 2/log_ps2.log
+  log type:  text
+ opened on:   8 Mar 2022, 22:43:38
+
+. 
+end of do-file
+
+. do "/var/folders/xb/mch0wfzd205d97392nxjwj240000gn/T//SD08843.000000"
+
+. 
+. /*
+>         Problem set 2, Econ 717
+>         
+>         Date created:  02 Mar 2022
+>         
+>         Last modified: 08 Mar 2022
+>         
+>         Author: Giselle Labrador-Badia (labradorbada@wisc.edu)
+> */
+. 
+. 
+. /* Setup */
+. 
+. 
+. // establish working directory
+. cd "/Users/gisellelab/pCloud Drive/PHD/Courses/02 - Second Year/ECON 717 (Metri
+> cs)/Problem Sets/Problem Set 2"
+/Users/gisellelab/pCloud Drive/PHD/Courses/02 - Second Year/ECON 717 (Metrics)/Pr
+> oblem Sets/Problem Set 2
+
+. 
+. 
+. // Loading data
+. /* National Supported Work Demonstration (NSW). This is the 
+> same data used by LaLonde (1986), Heckman and Hotz (1989), Dehejia and Wahba (1
+> 999,2002) 
+> and Smith and Todd (2005) and many others. */
+. use "Economics 717 Spring 2022 NSW Data.dta", clear
+
+. 
+. //Software: psmatch2.ado for Stata 
+. //net search psmatch2 
+. //ssc install psmatch2, replace
+. 
+. //generating age squared variable
+. gen age2 = age^2
+
+. 
+. // independent variables in macro, no treatment variable
+. glob X1 age age2 edu black hisp married nodegree
+
+. glob X age age2 edu black hisp married nodegree re74 re75
+
+. 
+. // save outreg 
+. glob opts "tex(frag) nor noobs noas"
+
+. 
+. /* question 0 */
+. /*
+> Drop the observations from the PSID comparison group. 
+> */
+. 
+. drop if sample == 3
+(2,490 observations deleted)
+
+. 
+. 
+. /* question 1 */
+. /*
+> Generate an experimental impact estimate by running a regression of earnings in
+>  1978 on the 
+> treated variable along with age, age squared, education, black, Hispanic, marri
+> ed, no degree and 
+> earnings in "1974" and 1975.
+> */
+. 
+. reg re78 treated $X, robust
+
+Linear regression                               Number of obs     =        722
+                                                F(10, 711)        =       2.75
+                                                Prob > F          =     0.0025
+                                                R-squared         =     0.0454
+                                                Root MSE          =     6152.3
+
+------------------------------------------------------------------------------
+             |               Robust
+        re78 | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+     treated |   818.7003   487.8295     1.68   0.094    -139.0582    1776.459
+         age |  -145.9217   200.7603    -0.73   0.468    -540.0755    248.2322
+        age2 |   2.799479   3.245728     0.86   0.389     -3.57288    9.171837
+        educ |   206.8112   165.4509     1.25   0.212    -118.0195     531.642
+       black |  -1461.261   734.3153    -1.99   0.047    -2902.947   -19.57563
+        hisp |   100.4831   958.5652     0.10   0.917    -1781.474     1982.44
+     married |   133.9094   660.0178     0.20   0.839    -1161.908    1429.726
+    nodegree |   -405.909   752.0756    -0.54   0.590    -1882.464    1070.646
+        re74 |   .0871344   .1061708     0.82   0.412    -.1213114    .2955802
+        re75 |   .0839624   .1188638     0.71   0.480    -.1494036    .3173283
+       _cons |    5648.81   3757.499     1.50   0.133     -1728.31    13025.93
+------------------------------------------------------------------------------
+
+. outreg2 using table_q1.tex, replace `opts'
+table_q1.tex
+dir : seeout
+
+. 
+. /* question 2 */
+. /*
+> Drop the experimental treatment group.  
+> */
+. 
+. drop if treated == 1 
+(297 observations deleted)
+
+. 
+. //sample size
+. glob sample_size = _N
+
+. 
+. /* question 3 */
+. /*
+> Estimate two sets of propensity scores using a probit model. 
+> */
+. 
+. // creating experiment variable  d = 1 if sample = 1,  d = 0 if sample = 2
+. gen exp = 1 if sample == 1 //for the experimental sample (the union of the trea
+> tment and control groups) 
+(15,992 missing values generated)
+
+. replace exp = 0 if sample == 2 //for the comparison group from the Current Popu
+> lation Survey (CPS) 
+(15,992 real changes made)
+
+. 
+. // analysis of differences in characteristics accross d=1 and d=0
+. eststo clear
+
+. hist age, by(exp) color(red%30)
+
+. hist educ, by(exp) color(blue%30)
+
+. 
+. 
+. // probit without re74, re75 ("coarse" scores)
+. probit exp  $X1
+
+Iteration 0:   log likelihood = -1972.3937  
+Iteration 1:   log likelihood = -1152.9501  
+Iteration 2:   log likelihood = -946.08275  
+Iteration 3:   log likelihood = -919.36768  
+Iteration 4:   log likelihood = -917.89575  
+Iteration 5:   log likelihood =  -917.8945  
+Iteration 6:   log likelihood =  -917.8945  
+
+Probit regression                                      Number of obs =  16,417
+                                                       LR chi2(7)    = 2109.00
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -917.8945                             Pseudo R2     =  0.5346
+
+------------------------------------------------------------------------------
+         exp | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         age |   .2532387   .0293232     8.64   0.000     .1957664    .3107111
+        age2 |  -.0045319   .0004929    -9.19   0.000    -.0054981   -.0035658
+        educ |   .0168833   .0180737     0.93   0.350    -.0185405     .052307
+       black |   1.989908   .0778422    25.56   0.000      1.83734    2.142476
+        hisp |   .9732994   .1033626     9.42   0.000     .7707124    1.175886
+     married |  -1.101057   .0826205   -13.33   0.000     -1.26299   -.9391236
+    nodegree |   1.132688   .1004559    11.28   0.000     .9357984    1.329578
+       _cons |     -6.358   .4834229   -13.15   0.000    -7.305492   -5.410509
+------------------------------------------------------------------------------
+Note: 727 failures and 0 successes completely determined.
+
+. predict pscorea, pr
+
+. 
+. // probit with re74, re75 ("rich" scores)
+. probit exp $X
+
+Iteration 0:   log likelihood = -1972.3937  
+Iteration 1:   log likelihood = -1134.7468  
+Iteration 2:   log likelihood = -901.47114  
+Iteration 3:   log likelihood =  -864.6975  
+Iteration 4:   log likelihood = -862.49864  
+Iteration 5:   log likelihood = -862.48901  
+Iteration 6:   log likelihood = -862.48901  
+
+Probit regression                                      Number of obs =  16,417
+                                                       LR chi2(9)    = 2219.81
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -862.48901                            Pseudo R2     =  0.5627
+
+------------------------------------------------------------------------------
+         exp | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         age |   .3224723    .031638    10.19   0.000     .2604629    .3844817
+        age2 |  -.0054825   .0005302   -10.34   0.000    -.0065216   -.0044433
+        educ |   .0178156   .0182703     0.98   0.330    -.0179934    .0536247
+       black |   1.950403   .0795723    24.51   0.000     1.794444    2.106362
+        hisp |   .9775352   .1061721     9.21   0.000     .7694418    1.185629
+     married |  -.9090639    .086934   -10.46   0.000    -1.079451   -.7386764
+    nodegree |   1.071194   .1039852    10.30   0.000     .8673865    1.275001
+        re74 |  -1.07e-06   8.60e-06    -0.12   0.901    -.0000179    .0000158
+        re75 |  -.0000576   9.56e-06    -6.03   0.000    -.0000764   -.0000389
+       _cons |  -7.108113   .5090983   -13.96   0.000    -8.105928   -6.110299
+------------------------------------------------------------------------------
+Note: 1359 failures and 0 successes completely determined.
+
+. predict pscoreb, pr
+
+. 
+. 
+. 
+. /* question 4 */
+. /*
+> Examine the distributions of estimated propensity scores in the control group a
+> nd comparisons 
+> group samples. 
+> */
+. 
+. //distribution of propensity scores
+. 
+. tabstat pscorea, by(exp) stat(min p25 median mean p75 max n)
+
+Summary for variables: pscorea
+Group variable: exp 
+
+     exp |       Min       p25       p50      Mean       p75       Max         N
+---------+----------------------------------------------------------------------
+       0 |  9.79e-13  .0000213  .0001069  .0164119  .0035243  .6872082     15992
+       1 |  .0000756  .2007289  .4716014  .3873009  .5998097  .6872082       425
+---------+----------------------------------------------------------------------
+   Total |  9.79e-13  .0000215  .0001121  .0260134   .003898  .6872082     16417
+--------------------------------------------------------------------------------
+
+. tabstat pscoreb, by(exp) stat(min p25 median mean p75 max n)
+
+Summary for variables: pscoreb
+Group variable: exp 
+
+     exp |       Min       p25       p50      Mean       p75       Max         N
+---------+----------------------------------------------------------------------
+       0 |  2.08e-16  1.97e-06  .0000677  .0154465  .0023622  .7886285     15992
+       1 |  1.64e-06  .2104997  .4634333  .4248305  .6294066  .8024473       425
+---------+----------------------------------------------------------------------
+   Total |  2.08e-16  2.15e-06  .0000899  .0260445  .0031498  .8024473     16417
+--------------------------------------------------------------------------------
+
+. 
+. est clear
+
+. eststo: estpost tabstat pscorea, by(exp) stat(min p25 median mean p75 max n)
+
+Summary statistics: Min p25 p50 Mean p75 Max count
+     for variables: pscorea
+  by categories of: exp
+
+         exp |    e(Min)     e(p25)     e(p50)    e(Mean)     e(p75)     e(Max) 
+-------------+------------------------------------------------------------------
+           0 |  9.79e-13   .0000213   .0001069   .0164119   .0035243   .6872082 
+           1 |  .0000756   .2007289   .4716014   .3873009   .5998097   .6872082 
+-------------+------------------------------------------------------------------
+       Total |  9.79e-13   .0000215   .0001121   .0260134    .003898   .6872082 
+
+         exp |  e(count) 
+-------------+-----------
+           0 |     15992 
+           1 |       425 
+-------------+-----------
+       Total |     16417 
+(est1 stored)
+
+. esttab using "question4a.tex", replace unstack cells("Min p25 p50 Mean p75 Max 
+> count") compress ///
+> title("pscorea")
+(output written to question4a.tex)
+
+. 
+. est clear
+
+. eststo: estpost tabstat pscoreb, by(exp) stat(min p25 median mean p75 max n)
+
+Summary statistics: Min p25 p50 Mean p75 Max count
+     for variables: pscoreb
+  by categories of: exp
+
+         exp |    e(Min)     e(p25)     e(p50)    e(Mean)     e(p75)     e(Max) 
+-------------+------------------------------------------------------------------
+           0 |  2.08e-16   1.97e-06   .0000677   .0154465   .0023622   .7886285 
+           1 |  1.64e-06   .2104997   .4634333   .4248305   .6294066   .8024473 
+-------------+------------------------------------------------------------------
+       Total |  2.08e-16   2.15e-06   .0000899   .0260445   .0031498   .8024473 
+
+         exp |  e(count) 
+-------------+-----------
+           0 |     15992 
+           1 |       425 
+-------------+-----------
+       Total |     16417 
+(est1 stored)
+
+. esttab using "question4b.tex", replace unstack cells("Min p25 p50 Mean p75 Max 
+> count") compress ///
+> title("pscoreb")
+(output written to question4b.tex)
+
+. 
+.                 
+. /* question 5 */
+. /*
+> Construct a histogram of the estimated propensity scores for the combined exper
+> imental 
+> control group and for the CPS comparison group.
+> */
+. //method 1
+. twoway hist pscorea, by(exp) title(Propensty Score A) color(red%30) xlab(0(.1)0
+> .8) width(0.1)
+
+. twoway hist pscoreb, by(exp) title(Propensity Score B)  color(blue%30) xlab(0(.
+> 1)0.8) width(0.1)
+
+. 
+. 
+. //method 2
+. twoway  ///
+>         hist pscorea if exp == 0, width(0.05) color(red%30)             ||     
+>  ///
+>         hist pscorea if exp == 1, width(0.05) color(green%30)                  
+>  ///
+>                 ylab(, angle(horizontal)) graphregion(color(white))            
+>  ///
+>                 leg(lab(1 "exp = 0") lab(2 "exp = 1") region(lstyle(none)) nobo
+> x)       ///
+>                 xlab(0(.2)0.8) name(pscorea_hist, replace)              ///
+>                 xtitle("Propensity Score A") ytitle("Count")
+
+. 
+. twoway  ///
+>         hist pscoreb if exp == 0, width(0.05) color(red%30)             ||     
+>          ///
+>         hist pscoreb if exp == 1, width(0.05) color(green%30)                  
+>          ///
+>                 ylab(, angle(horizontal)) graphregion(color(white))            
+>          ///
+>                 leg(lab(1 "exp=0") lab(2 "exp=1") region(lstyle(none)) nobox)  
+>  ///
+>                 xlab(0(.2)0.8) xtitle("Propensity Score B") ytitle("Count")    
+>                  ///
+>                 name(pscoreb_hist, replace)
+
+. 
+. // method 3
+. egen binsa = cut(pscorea), at(0(0.05)1) icodes
+
+. graph bar (count) pscorea, over(exp) over(binsa, label(nolab)) asyvars 
+
+. 
+. egen binsb = cut(pscoreb), at(0(0.05)1) icodes
+
+. graph bar (count) pscoreb, over(exp) over(binsb, label(nolab)) asyvars
+
+. 
+. /* question 6 */
+. /*
+> Construct non-experimental bias estimates for both sets of estimated propensity
+>  scores using 
+> single nearest neighbor matching without replacement. Impose the common support
+>  condition 
+> using the min-max version described in the lecture notes. 
+> */
+. 
+. 
+. // Psmatch, coarse pscores
+. psmatch2 exp, outcome(re78) pscore(pscorea) common noreplacement
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT |  5090.0482   9529.11811  -4439.06991   486.482153  
+>   -9.12
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+           | psmatch2:
+ psmatch2: |   Common
+ Treatment |  support
+assignment | On suppor |     Total
+-----------+-----------+----------
+ Untreated |    15,992 |    15,992 
+   Treated |       425 |       425 
+-----------+-----------+----------
+     Total |    16,417 |    16,417 
+
+. // Count observations to drop
+. sum pscorea if _support == 0 & treated == 0
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     pscorea |          0
+
+. 
+. 
+. // Psmatch, rich pscores
+. psmatch2 exp, outcome(re78) pscore(pscoreb) common noreplacement
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT | 5067.39448   7408.17564  -2340.78116   449.369786  
+>   -5.21
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0     15,992 |    15,992 
+   Treated |         7        418 |       425 
+-----------+----------------------+----------
+     Total |         7     16,410 |    16,417 
+
+. 
+. /* question 7 */
+. /*
+> Repeat Problem 6 but using single nearest neighbor matching with replacement. 
+> */
+. 
+. // Psmatch coarse scores
+. psmatch2 exp, outcome(re78) pscore(pscorea) common
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT |  5090.0482   8767.08057  -3677.03237   934.497524  
+>   -3.93
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+           | psmatch2:
+ psmatch2: |   Common
+ Treatment |  support
+assignment | On suppor |     Total
+-----------+-----------+----------
+ Untreated |    15,992 |    15,992 
+   Treated |       425 |       425 
+-----------+-----------+----------
+     Total |    16,417 |    16,417 
+
+. 
+. // Psmatch rich scores
+. psmatch2 exp, outcome(re78) pscore(pscoreb) common
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT | 5067.39448   6583.38855  -1515.99407   707.616814  
+>   -2.14
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0     15,992 |    15,992 
+   Treated |         7        418 |       425 
+-----------+----------------------+----------
+     Total |         7     16,410 |    16,417 
+
+. 
+. /* question 8 */
+. /*
+> Estimate the standardized difference in "real earnings in 1974" and "real earni
+> ngs in 1975" 
+> based on the raw data and based on the rich scores and single nearest neighbour
+>  matching with 
+> replacement. 
+> */
+. 
+. // Standardized differences in the raw data
+. //stddiff calculates the standardized difference between two groups
+. stddiff re74, by(exp)
+
+------------------------------------------------------------------------------
+             |          exp=0          |          exp=1          |
+             | Mean or N     SD or (%) | Mean or N     SD or (%) |  Std Diff
+-------------+-------------------------+-------------------------+------------
+        re74 |     14017        9569.8 |      3672        6521.5 |    1.26323
+------------------------------------------------------------------------------
+
+. stddiff re75, by(exp)
+
+------------------------------------------------------------------------------
+             |          exp=0          |          exp=1          |
+             | Mean or N     SD or (%) | Mean or N     SD or (%) |  Std Diff
+-------------+-------------------------+-------------------------+------------
+        re75 |     13651        9270.4 |      3027        5201.2 |    1.41345
+------------------------------------------------------------------------------
+
+. 
+. //coarse scores
+. // Standardized differences in the matched data
+. psmatch2 exp, outcome(re78) pscore(pscorea) common
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT |  5090.0482   8767.08057  -3677.03237   934.497524  
+>   -3.93
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+           | psmatch2:
+ psmatch2: |   Common
+ Treatment |  support
+assignment | On suppor |     Total
+-----------+-----------+----------
+ Untreated |    15,992 |    15,992 
+   Treated |       425 |       425 
+-----------+-----------+----------
+     Total |    16,417 |    16,417 
+
+. //computes Kolmogorov-Smirnov and Cramer-von Mises type tests for the null hypo
+> thesis
+. //that a parametric model for the propensity score is is correctly specified. 
+. pstest re74 
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+re74                    | 3672.5   6666.2    -36.6 |  -6.23  0.000 |  0.76*
+------------------------------------------------------------------------------
+* if variance ratio outside [0.83; 1.21]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.032     37.43    0.000     36.6      36.6      42.7*    0.76    100
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. pstest re75
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+re75                    | 3026.7   6488.7    -46.1 |  -8.01  0.000 |  0.52*
+------------------------------------------------------------------------------
+* if variance ratio outside [0.83; 1.21]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.053     61.99    0.000     46.1      46.1      55.0*    0.52    100
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. 
+. 
+. //rich scores
+. // Standardized differences in the matched data
+. psmatch2 exp, outcome(re78) pscore(pscoreb) common
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT | 5067.39448   6583.38855  -1515.99407   707.616814  
+>   -2.14
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0     15,992 |    15,992 
+   Treated |         7        418 |       425 
+-----------+----------------------+----------
+     Total |         7     16,410 |    16,417 
+
+. //computes Kolmogorov-Smirnov and Cramer-von Mises type tests for the null hypo
+> thesis
+. //that a parametric model for the propensity score is is correctly specified. 
+. pstest re74 
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+re74                    |   3734   4475.2     -9.1 |  -1.74  0.082 |  1.31*
+------------------------------------------------------------------------------
+* if variance ratio outside [0.83; 1.21]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.003      3.00    0.083      9.1       9.1      12.0    1.31     100
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. pstest re75
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+re75                    | 3077.4   3629.4     -7.3 |  -1.56  0.120 |  1.09
+------------------------------------------------------------------------------
+* if variance ratio outside [0.83; 1.21]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.002      2.42    0.120      7.3       7.3      10.8    1.09       0
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. 
+. 
+. /* question 9 */
+. /*
+> Create propensity score matching estimates using the rich propensity scores and
+>  kernel 
+> matching with a Gaussian (normal) kernel and bandwidths of 0.02, 0.2 and 2.0. I
+> mpose the 
+> common support condition as in Problem 6. Describe the resulting impact estimat
+> es
+> */
+. 
+. 
+. psmatch2 exp, outcome(re78) pscore(pscoreb) kernel kerneltype(normal) bwidth(0.
+> 02) common
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT | 5067.39448   7416.48625  -2349.09177   658.531426  
+>   -3.57
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0     15,992 |    15,992 
+   Treated |         7        418 |       425 
+-----------+----------------------+----------
+     Total |         7     16,410 |    16,417 
+
+. psmatch2 exp, outcome(re78) pscore(pscoreb) kernel kerneltype(normal) bwidth(0.
+> 20) common
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT | 5067.39448   12110.8234  -7043.42897     337.0603  
+>  -20.90
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0     15,992 |    15,992 
+   Treated |         7        418 |       425 
+-----------+----------------------+----------
+     Total |         7     16,410 |    16,417 
+
+. psmatch2 exp, outcome(re78) pscore(pscoreb) kernel kerneltype(normal) bwidth(2.
+> 0) common
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT | 5067.39448   14839.5273  -9772.13283   289.251216  
+>  -33.78
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0     15,992 |    15,992 
+   Treated |         7        418 |       425 
+-----------+----------------------+----------
+     Total |         7     16,410 |    16,417 
+
+. 
+. 
+. /* question 10 */
+. /*
+> Repeat Problem 9 but using local linear matching rather than kernel matching.
+> */
+. psmatch2 exp, outcome(re78) pscore(pscoreb) llr bwidth(0.02) common //broke sta
+> ta?
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT | 5067.39448   7048.27098   -1980.8765   707.616814  
+>   -2.80
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0     15,992 |    15,992 
+   Treated |         7        418 |       425 
+-----------+----------------------+----------
+     Total |         7     16,410 |    16,417 
+
+. psmatch2 exp, outcome(re78) pscore(pscoreb) llr bwidth(0.20) common
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT | 5067.39448   7488.81187  -2421.41739   707.616814  
+>   -3.42
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0     15,992 |    15,992 
+   Treated |         7        418 |       425 
+-----------+----------------------+----------
+     Total |         7     16,410 |    16,417 
+
+. psmatch2 exp, outcome(re78) pscore(pscoreb) llr bwidth(2.0) common
+---------------------------------------------------------------------------------
+> -------
+        Variable     Sample |    Treated     Controls   Difference         S.E.  
+>  T-stat
+----------------------------+----------------------------------------------------
+> -------
+            re78  Unmatched |  5090.0482   14846.6596  -9756.61142   470.155617  
+>  -20.75
+                        ATT | 5067.39448   4073.51859   993.875888   707.616814  
+>    1.40
+----------------------------+----------------------------------------------------
+> -------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0     15,992 |    15,992 
+   Treated |         7        418 |       425 
+-----------+----------------------+----------
+     Total |         7     16,410 |    16,417 
+
+. 
+. 
+. /* question 11 */
+. /*
+> Obtain an estimate of the bias by estimating a linear regression of real earnin
+> gs in 1978 on 
+> the variables in the rich propensity scores and a treatment dummy using all of 
+> the observations in 
+> the control group and the CPS comparison group. 
+> */
+. 
+. reg re78 exp $X
+
+      Source |       SS           df       MS      Number of obs   =    16,417
+-------------+----------------------------------   F(10, 16406)    =   1535.42
+       Model |  7.4527e+11        10  7.4527e+10   Prob > F        =    0.0000
+    Residual |  7.9632e+11    16,406  48538433.6   R-squared       =    0.4834
+-------------+----------------------------------   Adj R-squared   =    0.4831
+       Total |  1.5416e+12    16,416  93907732.1   Root MSE        =      6967
+
+------------------------------------------------------------------------------
+        re78 | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         exp |   -1853.39   383.0713    -4.84   0.000    -2604.251   -1102.528
+         age |  -235.5257   40.53634    -5.81   0.000    -314.9813   -156.0701
+        age2 |   1.857809    .552854     3.36   0.001     .7741547    2.941463
+        educ |   163.3092   28.41906     5.75   0.000     107.6048    219.0137
+       black |  -832.3813   208.6633    -3.99   0.000    -1241.384   -423.3786
+        hisp |  -114.1536   215.2908    -0.53   0.596    -536.1469    307.8398
+     married |   199.4396   148.0451     1.35   0.178    -90.74481     489.624
+    nodegree |   296.5755   176.6153     1.68   0.093    -49.60968    642.7608
+        re74 |   .2912688   .0120995    24.07   0.000     .2675524    .3149852
+        re75 |   .4710542   .0120739    39.01   0.000     .4473881    .4947202
+       _cons |    7757.18   726.8875    10.67   0.000     6332.402    9181.959
+------------------------------------------------------------------------------
+
+. 
+. 
+. /* question 12 */
+. /*
+> Obtain an estimate of the bias by estimating a linear regression of real earnin
+> gs in 1978 on 
+> the variables in the rich propensity scores using only the untreated observatio
+> ns. Use the 
+> predicted values from this regression, evaluated at the covariate values associ
+> ated with each 
+> treated unit, as the estimated expected counterfactual outcomes for the treated
+>  units. 
+> */
+. 
+. reg re78 $X if exp == 0
+
+      Source |       SS           df       MS      Number of obs   =    15,992
+-------------+----------------------------------   F(9, 15982)     =   1611.69
+       Model |  7.0811e+11         9  7.8679e+10   Prob > F        =    0.0000
+    Residual |  7.8021e+11    15,982    48817800   R-squared       =    0.4758
+-------------+----------------------------------   Adj R-squared   =    0.4755
+       Total |  1.4883e+12    15,991  93072162.5   Root MSE        =      6987
+
+------------------------------------------------------------------------------
+        re78 | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         age |  -252.0485   41.43196    -6.08   0.000    -333.2598   -170.8372
+        age2 |   2.040805   .5638224     3.62   0.000       .93565    3.145961
+        educ |   166.5983   28.71426     5.80   0.000     110.3151    222.8815
+       black |  -773.8793   215.0483    -3.60   0.000    -1195.398   -352.3605
+        hisp |  -168.2284   219.4738    -0.77   0.443    -598.4218    261.9649
+     married |   244.1442   150.4854     1.62   0.105    -50.82401    539.1125
+    nodegree |   330.6767   179.4006     1.84   0.065    -20.96861    682.3219
+        re74 |   .2988693   .0122474    24.40   0.000     .2748631    .3228755
+        re75 |   .4699589   .0121713    38.61   0.000     .4461017     .493816
+       _cons |   7908.362   740.4669    10.68   0.000     6456.964     9359.76
+------------------------------------------------------------------------------
+
+. //Generate predicted values based on the regression
+. predict xb
+(option xb assumed; fitted values)
+
+. //find the difference between actual 1978 earnings and what I predict for those
+>  who are in the experimental sample
+. gen dif = re78 - xb if exp == 1
+(15,992 missing values generated)
+
+. // take the mean to get the avg diff
+. mean(dif)
+
+Mean estimation                            Number of obs = 425
+
+--------------------------------------------------------------
+             |       Mean   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+         dif |  -1851.549   299.6624     -2440.557    -1262.54
+--------------------------------------------------------------
+
+. 
+. /* question 13 */
+. /*
+> Obtain an estimate of the bias using inverse probability weighting and the rich
+>  propensity 
+> scores. Implement this estimator "by hand" (i.e. code it up yourself in Stata) 
+> and do it in two 
+> ways: rescaling the weights to sum to one and not rescaling the weights to sum 
+> to one. 
+> */
+. 
+. 
+. // Not normalized
+. 
+. //mean outcome of treated
+. gen mtt1a = re78*exp
+
+. egen mtt1b = sum(mtt1a)
+
+. count if exp == 1
+  425
+
+. gen mtt1 = mtt1b / r(N)
+
+. 
+. egen uncondp = mean(pscoreb)
+
+. gen mtt2a = pscoreb*re78*(1-exp)/(1-pscoreb)*(1-uncondp)/uncondp
+
+. egen mtt2b = sum(mtt2a)
+
+. count if exp==0
+  15,992
+
+. gen mtt2 = mtt2b/r(N)
+
+. 
+. // ipw estimates
+. gen mtt = mtt1-mtt2
+
+. 
+. display mtt
+-1380.1577
+
+. 
+. // Normalized
+. gen mtt_wt1a =pscoreb*(1-exp)/(1-pscoreb)
+
+. egen mtt_w1b =sum(mtt_wt1a)
+
+. count if exp == 0
+  15,992
+
+. gen mtt_w1=r(N)/mtt_w1b
+
+.  
+. gen mtt2_norma =pscoreb*re78*(1-exp)/(1-pscoreb)
+
+. gen mtt2_normb =mtt_w1*mtt2_norma
+
+. egen mtt2_normc=sum(mtt2_normb)
+
+. count if exp==0
+  15,992
+
+. gen mtt2_norm = mtt2_normc/r(N)
+
+. 
+. // ipw estimates
+. gen mtt_norm = mtt1-mtt2_norm
+
+. 
+. display mtt_norm
+-1996.4663
+
+. 
+. 
+. 
+. 
+. log close
+      name:  <unnamed>
+       log:  /Users/gisellelab/pCloud Drive/PHD/Courses/02 - Second Year/ECON 717
+>  (Metrics)/Problem Sets/Problem Set 2/log_ps2.log
+  log type:  text
+ closed on:   8 Mar 2022, 22:45:00
+---------------------------------------------------------------------------------

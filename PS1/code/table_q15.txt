@@ -1,0 +1,23 @@
+	(1)
+VARIABLES	Resid2
+	
+Client_Age	3.97e-05
+	(0.00137)
+Client_Married	0.0138
+	(0.0326)
+Client_Education	-0.00291
+	(0.00259)
+HH_Size	-0.00778
+	(0.00598)
+HH_Income	3.05e-06
+	(2.37e-06)
+muslim	-0.0117
+	(0.0236)
+Hindu_SC_Kat	-0.0156
+	(0.0334)
+Treated	0.0281
+	(0.0222)
+Constant	0.153
+	(0.0721)
+	
+Standard errors in parentheses	
