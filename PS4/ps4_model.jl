@@ -98,7 +98,6 @@ function simulate(θ::Primitives; n::Integer=1000, seed::Integer=350, w1lowerbou
     return data
 end
 
-
 """
     get_params_percent(percent)
 
