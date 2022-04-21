@@ -14,7 +14,7 @@
 
 
 # importing libraries
-using Parameters, DataFrames, LinearAlgebra, Distributions, LinearAlgebra, StatsBase, Random
+using Parameters, DataFrames, LinearAlgebra, Distributions, LinearAlgebra, StatsBase, Random, Optim
 
 """
     Define the structure that contains the "true" model parameters.
@@ -84,18 +84,20 @@ function simulate(θ::Primitives; n::Integer=1000, seed::Integer=350, w1lowerbou
     Random.seed!(seed)
 
     # generating array of n individuals
-    ε = rand(Distributions.MvNormal([0, 0], Σ), n)'
-    s₁ = μ₁ .+  ε[:,1]    
-    s₂ = μ₂ .+  ε[:,2]
-    w₁ = max.(π₁.*s₁, w1lowerbound)
-    w₂ = w₁ + π₂.*s₂
+    ε = rand(Distributions.MvNormal([0, 0], Σ), n)' 
 
+    s₁ = exp.(μ₁ .+  ε[:,1]) # TODO: check if this is correct exponential    
+    s₂ = exp.(μ₂ .+  ε[:,2])
+    w₁ = max.(π₁.*s₁, w1lowerbound)
+    w₂ = π₂.*s₂
+ 
     # returning DataFrame of observations
     data = DataFrame(ind=1:n,
-                    d = 1*(w₁ .< w₂), 
+                    d = 1*(w₁ .>= w₂), # 1 if w₁ >= w₂, 0 otherwise check this 
                     wage=(w₁ .>= w₂).*w₁ + (w₁ .< w₂).*w₂)
     return data
 end
+
 
 """
     get_params_percent(percent)
@@ -112,8 +114,8 @@ end
 
 """
 function get_params_percent(percent::Float64, precision::Float64 = 10000.0; 
-    lower_bounds = [1.0, 1.0, 0.8, 1.0, 1.0, 0.01, 0.5], 
-    upper_bounds = [1.0, 1.0, 0.8, 1.0, 1.0, 10 ,0.5], 
+    lower_bounds = [1.0, 1.0, 1.2, 1, 0.5, 0.01, 0.5], 
+    upper_bounds = [1.0, 1.0, 1.2, 1, 0.5, 30 ,0.5], 
     tol = 1e-3)
 
     # generating grids
@@ -129,18 +131,69 @@ function get_params_percent(percent::Float64, precision::Float64 = 10000.0;
     for i in grid[6]
         θ =  [grid[1][1], grid[2][1], grid[3][1], grid[4][1], grid[5][1], i,grid[7][1]]
         # cheching distance to the desired percent, return is close enough
-        if abs(percent - mean(simulate(initialize(θ)).d .== 1)) < tol  return θ end
+        #println(mean(simulate(initialize(θ)).d .== 1))
+        if abs(percent - mean(simulate(initialize(θ), n = 10000).d .== 1)) < tol  return θ end
     end
     # not found
-    return lower_bounds
+    return [1.0, 1.0, 1.4, 1, 0.4,-Inf,0.5]
 
 end
-
-"""
-    simulated_method_moments()
-"""
-function simulated_method_moments()
-
-end
-
 get_params_percent(0.6)
+"""
+    simulated_method_moments_objective()
+
+    Objective function that compares simulated moments with moments passed in arguments.
+    The vector of parameters is (π₁, π₂, μ₁, μ₂, σ₁, σ₂, ρ).
+"""
+function simulated_method_moments_objective(θ::Vector{Float64}, ĝ::Vector{Float64};
+     n::Int64 = 100000,  weights::Matrix{Float64} = 1.0*Matrix(I, length(ĝ), length(ĝ)))
+
+    # compute observed moments from argument data
+    g = get_moments(simulate(initialize(θ), n=n))
+
+    # objective function
+    return (g - ĝ)'*weights*(g - ĝ)
+end
+
+"""
+    get_moments(data::DataFrame)
+
+    Compute the moments of the data.
+
+    # Arguments: 
+        - data: a DataFrame with the data
+
+"""
+function get_moments(data::DataFrame)
+    # computing the simulated moments
+    g = [ mean(data.d .== 1), # E[d]
+        mean(data.wage[data.d .== 0]), # E[w|d=0]
+        mean(data.wage[data.d .== 1]),  # E[w|d=1]
+        var(data.wage[data.d .== 0]), # V[w|d=0]
+        var(data.wage[data.d .== 1]), # V[w|d=1]
+    ]
+    return g
+end
+
+
+
+""" 
+    simulated_method_moments(data)
+
+    Estimate the parameters of the model using simulated moments, optimzing the objective function.
+"""
+function simulated_method_moments(data::DataFrame, θ₂::Vector{Float64})
+    
+    ĝ = get_moments(data)
+    θ₁_0 = [1,0.1]
+    result = optimize(θ₁ -> simulated_method_moments_objective(vcat(θ₂[1:2],θ₁[1], θ₂[3:5], θ₁[2]), ĝ),
+            θ₁_0 ,
+            NelderMead(),
+            Optim.Options(g_tol = 1e-12, iterations = 2000))
+
+    return result.minimizer
+end
+
+
+
+
