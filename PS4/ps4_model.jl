@@ -86,13 +86,14 @@ function simulate(θ::Primitives; n::Integer=1000, seed::Integer=350, w1lowerbou
     # generating array of n individuals
     ε = rand(Distributions.MvNormal([0, 0], Σ), n)' 
 
-    s₁ = exp.(μ₁ .+  ε[:,1]) # TODO: check if this is correct exponential    
+    s₁ = exp.(μ₁ .+  ε[:,1])     
     s₂ = exp.(μ₂ .+  ε[:,2])
+
     w₁ = max.(π₁.*s₁, w1lowerbound)
     w₂ = π₂.*s₂
  
     # returning DataFrame of observations
-    data = DataFrame(ind=1:n,
+    data = DataFrame(ind = 1:n,
                     d = 1*(w₁ .>= w₂), # 1 if w₁ >= w₂, 0 otherwise check this 
                     wage=(w₁ .>= w₂).*w₁ + (w₁ .< w₂).*w₂)
     return data
@@ -137,12 +138,40 @@ function get_params_percent(percent::Float64, precision::Float64 = 10000.0;
     return [1.0, 1.0, 1.4, 1, 0.4,-Inf,0.5]
 
 end
-get_params_percent(0.6)
+
+"""
+    get_wlowerbound_percent(percent)
+
+    Give a wage lower bound for which a certain percent of the individuals choose occupation 1. 
+    
+    # Arguments: 
+        - percent: the percent of individuals that choose occupation 1
+        - precision: the length of the search grids of parameters
+
+"""
+function get_wlowerbound_percent(percent::Float64, θ::Vector{Float64}, precision::Integer =10000)
+    # generating grids
+
+    for i in -2:(12/precision):10
+        if abs(percent - mean(simulate(initialize(θ),w1lowerbound = i).d .== 1)) < 1e-3  return i end
+    end
+    return -Inf
+end
+
+
+
 """
     simulated_method_moments_objective()
 
     Objective function that compares simulated moments with moments passed in arguments.
     The vector of parameters is (π₁, π₂, μ₁, μ₂, σ₁, σ₂, ρ).
+
+    # Arguments:
+        - θ: a vector containing the true parameters
+        - ĝ: a vector containing the data moments
+        - n: number of individuals to simulate
+        - weights: a matrix of weights for the moments
+
 """
 function simulated_method_moments_objective(θ::Vector{Float64}, ĝ::Vector{Float64};
      n::Int64 = 100000,  weights::Matrix{Float64} = 1.0*Matrix(I, length(ĝ), length(ĝ)))
@@ -157,14 +186,14 @@ end
 """
     get_moments(data::DataFrame)
 
-    Compute the moments of the data.
+    Compute the moments of the data, moments are E[d], E[w|d=0], E[w|d=1], V[w|d=0], V[w|d=1].
 
     # Arguments: 
-        - data: a DataFrame with the data
+        - data: a DataFrame with the data.
 
 """
 function get_moments(data::DataFrame)
-    # computing the simulated moments
+    # computing the moments from data
     g = [ mean(data.d .== 1), # E[d]
         mean(data.wage[data.d .== 0]), # E[w|d=0]
         mean(data.wage[data.d .== 1]),  # E[w|d=1]
@@ -180,11 +209,18 @@ end
     simulated_method_moments(data)
 
     Estimate the parameters of the model using simulated moments, optimzing the objective function.
+
+    # Arguments:
+        - data: a DataFrame with the data.
+        - θ₂: the true known parameters.
 """
 function simulated_method_moments(data::DataFrame, θ₂::Vector{Float64})
     
     ĝ = get_moments(data)
+
+    #initial guess
     θ₁_0 = [1,0.1]
+
     result = optimize(θ₁ -> simulated_method_moments_objective(vcat(θ₂[1:2],θ₁[1], θ₂[3:5], θ₁[2]), ĝ),
             θ₁_0 ,
             NelderMead(),
