@@ -1,0 +1,199 @@
+
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+
+\usepackage[margin=1.1 in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{mathtools}   % loads »amsmath«
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{xcolor}
+\usepackage{cancel}
+%\usepackage{graphics}
+\usepackage{graphicx}
+%others
+\usepackage{enumerate}
+\usepackage{subcaption}
+
+
+
+\usepackage{apacite}
+\usepackage[round]{natbib}
+%\bibliographystyle{plainnat}
+\bibliographystyle{apacite}
+
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+
+\setlength{\parskip}{0.8em}
+\usepackage{setspace}
+%\singlespacing
+\spacing{1.08}
+
+
+
+\newtheorem{defin}{Definition.}
+\newtheorem{teo}{Theorem. }
+\newtheorem{lema}{Lemma. }
+\newtheorem{coro}{Corolary. }
+\newtheorem{prop}{Proposition. }
+\theoremstyle{definition}
+\newtheorem{examp}{Example. }
+\newtheorem{problem}{}
+
+\title{Metrics, PS5}
+\author{Giselle Labrador Badia}
+\date{May 2022}
+
+\begin{document}
+
+\maketitle
+
+ Tables with standards errors are provided for all regressions and other relevant analyses that I discuss. All the Stata code pertinent to this assignment is attached. 
+ 
+ \subsection*{Part 1: Analytic exercises}
+ 
+ \noindent \hspace{0.41cm} \textbf{Question 1.}  Assume a returns to schooling model with just 1 unobserved variable ability $A$ distributed $U[0,1]$. Our potential outcomes model for earnings by schooling (treated) or not is
+$$
+\begin{gathered}
+Y_{1}=1+0.5 A \\
+Y_{0}=A
+\end{gathered}
+$$
+Treatment/schooling is determined by
+$$
+D=1\{-0.5+A>0\}
+$$
+ 
+ \begin{itemize}
+     \item[(a)] Average treatment effect  is $$ATE = \mathbb{E}[Y_{1}  - Y_{0}]= \mathbb{E}[1+0.5A- A]= \mathbb{E}[1- 0.5 A] = 1 - 0.5 \mathbb{E}[A] = 0.75$$
+     
+    %See that ATE can also be defined in terms of MTE as $ATE = \mathbb{E}[MTE] =  \mathbb{E}[Y_{1} - Y_0]$
+    
+    \item[(b)] The fraction of the population that takes the treatment is 
+    $$ \mathbb{P}[D=1] = \mathbb{P}[-0.5+A>0] = \mathbb{P}[A>0.5] = 1- \mathbb{P}[A<0.5] = 0.5 $$
+    
+     \item[(c)] The maximum treatment effect is
+     
+     $$\max_{A\in[0,1]} TE = \max_{A\in[0,1]} (Y_{1} - Y_0) = \max_{A\in[0,1]} (1-0.5A) = 0,\qquad \text{ attained at }A=0.$$
+     
+     The minimum treatment effect is
+          $$\min_{A\in[0,1]} TE = \min_{A\in[0,1]} (Y_{1} - Y_0) = \min_{A\in[0,1]} (1-0.5A) = 0.5,\qquad \text{ attained at }A=1.$$
+          
+     \item[(d)] Assume A distributed Normal, $A \sim N(0,1)$. Now the support in unbouded. 
+     
+     The maximum treatment effect is
+     
+     $$\sup_{A\in[-\infty,\infty]} TE = \infty$
+     
+     The minimum treatment effect is
+          $$\inf_{A\in[-\infty,\infty]} TE = -\infty$$
+      
+      \item[(e)] The average treatment effect on the treated is
+      \begin{align*}
+          ATET &= \mathbb{E}[Y_1-Y_0|D=1] = \mathbb{E}[1-0.5A|D=1]\\ 
+          &= \mathbb{E}[1-0.5A|A>0.5] =1-0.5\mathbb{E}[A|A>0.5]  \\
+          &= 1-0.5*0.75 = 0.625
+      \end{align*}
+      The average treatment effect on the untreated is
+           \begin{align*}
+          ATEU &= \mathbb{E}[Y_1-Y_0|D=0] = \mathbb{E}[1-0.5A|D=0]\\ 
+          &= \mathbb{E}[1-0.5A|A<0.5] =1-0.5\mathbb{E}[A|A<0.5]  \\
+          &= 1-0.5*0.25 = 0.875
+      \end{align*}
+      $$$$
+       
+    \item[(f)] ATEU > ATET because $TE = 1-0.5A$ is decreasing in $A$; in words, education (treatment) will have a greater effect in the earning of individuals with low ability. Individuals with high ability will have a relatively high earning with or without education. 
+    
+    \item[(g)] The OLS estimand for the effect of $D$ on $Y$ is
+    \begin{align*}
+        \beta(OLS) &= \mathbb{E}[Y|D=1] - \mathbb{E}[Y|D=0]\\
+                   &= \mathbb{E}[1+0.5A|A>0.5] - \mathbb{E}[A|A<0.5]\\
+                   &= 1 + 0.5*0.75  - 0.5\\
+                   &= 1.125
+    \end{align*}
+    
+    \item[(h)] The OLS estimand is biased upward for the ATE because treatment is not random but biased towards those with a higher ability. More formally, selection into treatment requires a higher ability, thus conditional independence fails.
+
+   \end{itemize}
+   
+    \noindent \hspace{0.41cm} \textbf{Question 2.}  2) Assume the potential outcomes model with $V=\delta_{0}+\delta_{1} Z+U_{V}$, for instrument $Z \in\{0,1\}$.
+    \begin{itemize}
+        \item[(a)] Now I prove that this model implies the Angrist and Imbens monotonicity assumption. (Note:  I omitted $i$ subscripts, but $\delta_{0}$ and $\delta_{1}$ are homogeneous parameters.)
+        
+        Monotonicity implies that given parameters $\delta_0$, $\delta_1$, $V_i(Z)$ is monotonic in $Z$ for all $i$.
+        
+        See that $V_i(Z=1)-V_i(Z=0) = \delta_1$ for all i, which means
+        \begin{itemize}
+            \item $V_i(Z=1)>V_i(Z=0)$ if $\delta_1>0$ $\Rightarrow$ $V_i$ is increasing in $Z$
+            \item $V_i(Z=1)>V_i(Z=0)$ if $\delta_1<0$ $\Rightarrow$ $V_i$ is decreasing in $Z$
+            \item $V_i(Z=1)>V_i(Z=0)$ if $\delta_1=0$ $\Rightarrow$ $V_i$ does not change with $Z$
+        \end{itemize}
+        
+        \item[(b)] In this model, a new function for $V$ such that monotonicity does not hold is
+        $$ V_i = \delta_{0}+\delta_{i1} Z +U_{iV}, \text{, where } \delta_{i1} \in \{-1,1\}$$
+        This model presents heterogeneous treatment effects, now $V_i(Z=1)-V_i(Z=0) = \delta_{i1}$ could be 1 or -1. Hence, monotonicity does not hold. 
+    \end{itemize}
+    
+     
+    \noindent \hspace{0.41cm} \textbf{Question 3.}  Assume $U_{V}$ is distributed Uniform $[-2,2]$, and $V=Z+U_{V}$ with $Z \in$ $\{0,1\}$. As usual, I assume individuals take treatment when $V>0$.
+    \begin{itemize}
+        \item[(a)] The range of $U_{V}$ values for the complier, defier, always taker, and never taker groups is
+        \begin{itemize}
+            \item Compliers ($C$): Take treatment when $Z=1$ and do not take the treatment when $Z=0$.
+            $$\iff V_1>0 \text{ and } V_0<0 \iff -1 \leq U_V \leq 0 $$
+             \item Defiers ($D$): Take treatment when $Z=0$ and do not take the treatment when $Z=1$.
+            $$\iff V_0>0 \text{ and } V_1<0 \iff -1 \geq U_V { and } U_V \leq 0 $$
+            which implies that there are no defiers. From the monotoniity assumption we can also infer that there will not be defiers.
+            \item Always takers ($AT$): Take treatment when $Z=1$ and when $Z=0$.
+            $$\iff V_1>0 \text{ and } V_0>0 \iff U_V \geq 0 $$
+            \item Never takers ($NT$): Do not take treatment when $Z=1$ and when $Z=0$.
+            $$\iff V_1<0 \text{ and } V_0<0 \iff U_V \leq -1 $$
+            
+            
+        \end{itemize}
+\item[(b)] Hence, the fraction of the population in each group.
+
+        \begin{itemize}
+            \item Compliers ($C$): $\mathbb{P}(-1 \leq U_V \leq 0 ) = \frac{1}{4}$
+             \item Defiers ($D$): $\mathbb{P}(D) = 0$
+            \item Always takers ($AT$): $\mathbb{P}(U_V\leq -1) = \frac{1}{4}$
+            \item Never takers ($NT$):  $\mathbb{P}( U_V\geq 0 ) = \frac{1}{2}$
+            
+    \end{itemize}
+    
+          
+    \noindent \hspace{0.41cm} \textbf{Question 4.}  Assume there are 2 types in the population. Type 1 has treatment effect $\Delta=2$ and Type 2 has $\Delta=-1$. 30 percent of the population is Type 1 , 70 percent Type 2. Type 1 s have utility given by $V=Z+U_{V}$, with $U_{V} \sim$ $U[-1,1]$ and Type 2 s have utility given by $V=2 Z+U_{V}$, with $U_{V} \sim U[-1,1]$. Let the instrument $Z \in\{0,1\}$ and $\operatorname{Pr}(Z=1)=0.5$.
+               
+        \begin{itemize}
+        \item[(a)] ATE is
+        \begin{align*}
+             ATE &= \mathbb{E}[\Delta] = \mathbb{P}(Type 1)\mathbb{E}[\Delta|Type 1] + \mathbb{P}(Type 2)\mathbb{E}[\Delta|Type 2]\\
+             &=0.3*2+0.7*(-1) = -0.1
+        \end{itemize}
+        \item[(b)] The probability of being treated given the instrument $Z$ is
+                \begin{align*}
+             \mathbb{P}(D=1|Z=1) &= \mathbb{P}(Type 1)\mathbb{P}(U_V>-1) + \mathbb{P}(Type 2)\mathbb{P}(U_V>-2)\\
+             &=0.3*1+0.7*1 = 1
+        \end{itemize}
+            \begin{align*}
+             \mathbb{P}(D=1|Z=0) &= \mathbb{P}(Type 1)\mathbb{P}(U_V>0) + \mathbb{P}(Type 2)\mathbb{P}(U_V>0)\\
+             &=0.3*\frac{1}{2}+0.7*\frac{1}{2} = \frac{1}{2}
+        \end{itemize}
+        \item[(c)] LATE is same as ATE. See that $Z$ and $U_V$ does not affect the treatment effect of any of the two groups. Compliers are $U_V \leq 0$ for the two types. More formally:
+                        \begin{align*}
+             LATE &= \mathbb{E}[\Delta|U_V<0] = \mathbb{P}(Type 1)\mathbb{E}[\Delta|Type 1,U_V<0] + \mathbb{P}(Type 2)\mathbb{E}[\Delta|Type 2,U_V<0]\\
+             &= \mathbb{P}(Type 1)\mathbb{E}[\Delta|Type 1] + \mathbb{P}(Type 2)\mathbb{E}[\Delta|Type 2]\\
+             &=ATE = -0.1 
+        \end{itemize}
+        
+        \end{itemize}
+ \subsection*{Part 2: Monte Carlo exercises}
+ 
+    \noindent \hspace{0.41cm} \textbf{Question 1.}  
+     
+    \noindent \hspace{0.41cm} \textbf{Question 2.}  
+    
+\end{document}
