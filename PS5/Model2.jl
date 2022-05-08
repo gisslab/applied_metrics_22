@@ -23,48 +23,107 @@ using Parameters, DataFrames, LinearAlgebra, Distributions, LinearAlgebra, Stats
     Define the structure that contains the "true" model parameters.
 
 """
-@with_kw mutable struct Primitives
+@with_kw struct Primitives
 # true unobserved parameters
-    # normalized parameters
-    π₁::Float64 = 1.0  # wage in occupation 1
-    π₂::Float64 = 1.0  # wage in occupation 2
-
-    # unknown mutable parameters
-    # ln(Sᵢ) =μᵢ + ϵᵢ  # log of individual skills by occupation i
-    μ₁::Float64 # mean of log skill in occupation 1
-    μ₂::Float64 # mean of log skill in occupation 2
-    σ₁::Float64 # std of log skill in occupation 1
-    σ₂::Float64 # std of log skill in occupation 2
-    ρ::Float64  # correlation coefficient
-    Σ::Array{Float64, 2} # covariance matrix
-
+    
+    p::Float64 = 0.3 # probability Z=1
+    σ₀::Float64 = 1.0
+    σ₁::Float64 = 1.0
+    σ₂::Float64  = 1.0# variance of V
+    σ01::Float64 = 0.5
+    σ02::Float64 = 0.3
+    σ12::Float64 = 0.7
+    # covariance matrix
+    Σ= [σ₀ σ01 σ02;  σ01 σ₁ σ12;  σ02 σ12 σ₂] #::Array{Float64, 3}  ,error
+                            
 end
 
 """
-    initialize(θ)
-
-    Initialize the model and returns Primitives struct.
-    
-    # Arguments: 
-        - θ: a vector structure containing the true parameters in the order: 
-        (π₁, π₂, μ₁, μ₂, σ₁, σ₂, ρ).
+    Define the structure for treatment effects.
 
 """
-function initialize(θ::Vector{Float64} = [1, 1, 0, 0, 0.5, 0.5, 0.5 ])
+@with_kw mutable struct TreatmentEffect
+    # true unobserved parameters
+        
+    ate::Float64  
+    atet::Float64
+    ateu::Float64
+    ols_coeff::Vector{Float64}
+    iv_coeff::Vector{Float64}
+    itt::Float64            
+end
 
-    # Unpack the parameters of the float vector
-    π₁, π₂, μ₁, μ₂, σ₁, σ₂, ρ = θ
+"""
+    simulate(θ,1000)
 
-    # filling covariance matrix
-    σ₁₂ = ρ * σ₁ * σ₂ # by ρ= σ₁₂/σ₁ * σ₂
-    Σ = [σ₁^2  σ₁₂;
-        σ₁₂ σ₂^2] 
-    prim = Primitives(π₁=π₁, π₂=π₂, μ₁=μ₁, μ₂=μ₂, σ₁=σ₁, σ₂=σ₂,ρ=ρ, Σ=Σ)
+    Simulate sample data from the model. Returns matrix with sample. 
 
-    # Return the primitives struct, parameter vector, and data
-    return prim
+    # Arguments: 
+        - n: number of individuals to simulate
+        - seed:  seed for the random number generator
 
-end 
+"""
+function simulate(n::Integer=1000, constantz = 2, seed::Integer=350)
 
+    # unpacking primitives from struct
+    @unpack p, σ₀, σ₁, σ₂, σ01, σ02, σ12, Σ = Primitives()
 
+    # setting seed 
+    Random.seed!(seed)
+    
+    # generating arrays of n individuals
+    ε = rand(Distributions.MvNormal([0, 0, 0], Σ), n)' # idiosyncratic shocks ϵ = (u1,u1,uv)
+    z = rand(Distributions.Bernoulli(p), n) # random experiment   
+
+    y₀ = 1 .+  ε[:,1]    
+    y₁ = 4 .+  ε[:,2] 
+    v =  (constantz .* z) .+ ε[:,3] .- 1
+
+    d = v .>= 0
+    y = y₁ .* d + y₀.* (1 .- d)
+
+    # returning DataFrame of simulated data
+    data = DataFrame(i = 1:n,
+                    d = d,
+                    z = z,
+                    y = y,
+                    y0 = y₀,
+                    y1 = y₁,
+                    v = v)
+    return data
+end
+
+"""
+treatmente_ffects(data)
+
+    Calculate ATE, ATET, ATEU, ols,direct/reduced reform/itt and iv. 
+    Returns a struct TreatmentEffect with the results.
+
+    # Arguments:
+        - data: DataFrame with the simulated data.
+"""
+function treatment_effects(data)
+
+    te = TreatmentEffect()
+    # ate
+    te.ate = mean(data.y1 .- data.y0)
+
+    # atet
+    te.atet = mean(data.y1[data.v .> 0] .- data.y0[d.v .> 0])
+
+    # ateu
+    te.ateu = mean(data.y1[data.v .< 0] .- data.y0[d.v .< 0])
+
+    # ols naive estimator
+    te.ols = mean(data.y[data.v .> 0]) - mean(data.y[data.v .< 0])
+
+    # iv 
+    num_iv = (mean(data.y[data.z .== 1]) - mean(data.y[data.z .== 0]))
+    den_iv = (mean(data.d[data.z .== 1]) - mean(data.d[data.z .== 0]))
+    te.iv =  num_iv / den_iv
+
+    # direct/reduced form/itt estimator
+    te.itt = num_iv
+
+    return te
 end # end of module

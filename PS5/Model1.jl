@@ -76,7 +76,7 @@ function simulate(n::Integer=1000, seed::Integer=350)
 
     # set seed for reproducibility
     Random.seed!(seed)
-    n=10
+
     # unpack model primitives 
     @unpack  lnwfun, adist, ϵdist  = Earnings()
     @unpack sfun, z₁dist, z₂dist, z₃dist, ηdist = Schooling()
