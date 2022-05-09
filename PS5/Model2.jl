@@ -2,14 +2,14 @@
 #== 
   Problem Set 5, Metrics 717, Spring 22
 
-  Module Question 1
+  Module Question 2
 
   author: 
     name: Giselle Labrador Badia
     email: labradorbada@wisc.edu
 
   This file contains functions use to define and solve
-   a simple Roy model.
+   an potential outcome model.
 
 ==#
 ###############################################################################
@@ -17,7 +17,7 @@
 module Model2 
 
 # importing libraries
-using Parameters, DataFrames, LinearAlgebra, Distributions, LinearAlgebra, StatsBase, Random, Optim
+using Parameters, DataFrames, LinearAlgebra, Distributions, LinearAlgebra, StatsBase, Random
 
 """
     Define the structure that contains the "true" model parameters.
@@ -45,12 +45,12 @@ end
 @with_kw mutable struct TreatmentEffect
     # true unobserved parameters
         
-    ate::Float64  
-    atet::Float64
-    ateu::Float64
-    ols_coeff::Vector{Float64}
-    iv_coeff::Vector{Float64}
-    itt::Float64            
+    ate::Float64 = 0.0
+    atet::Float64 = 0.0
+    ateu::Float64 = 0.0
+    ols_coeff::Float64 = 0.0
+    iv_coeff::Float64 = 0.0
+    itt::Float64 = 0.0            
 end
 
 """
@@ -79,8 +79,12 @@ function simulate(n::Integer=1000, constantz = 2, seed::Integer=350)
     y₁ = 4 .+  ε[:,2] 
     v =  (constantz .* z) .+ ε[:,3] .- 1
 
+    v₀ = ε[:,3] .- 1
+    v₁ = constantz .+ ε[:,3] .- 1
+
     d = v .>= 0
     y = y₁ .* d + y₀.* (1 .- d)
+    complier = (v₀ .< 0) .* (v₁ .> 0)
 
     # returning DataFrame of simulated data
     data = DataFrame(i = 1:n,
@@ -89,7 +93,8 @@ function simulate(n::Integer=1000, constantz = 2, seed::Integer=350)
                     y = y,
                     y0 = y₀,
                     y1 = y₁,
-                    v = v)
+                    v = v,
+                    c = complier)
     return data
 end
 
@@ -109,21 +114,28 @@ function treatment_effects(data)
     te.ate = mean(data.y1 .- data.y0)
 
     # atet
-    te.atet = mean(data.y1[data.v .> 0] .- data.y0[d.v .> 0])
+    te.atet = mean(data.y1[data.v .> 0] .- data.y0[data.v .> 0])
 
     # ateu
-    te.ateu = mean(data.y1[data.v .< 0] .- data.y0[d.v .< 0])
+    te.ateu = mean(data.y1[data.v .< 0] .- data.y0[data.v .< 0])
 
     # ols naive estimator
-    te.ols = mean(data.y[data.v .> 0]) - mean(data.y[data.v .< 0])
+    te.ols_coeff = mean(data.y[data.v .> 0]) - mean(data.y[data.v .< 0])
 
     # iv 
     num_iv = (mean(data.y[data.z .== 1]) - mean(data.y[data.z .== 0]))
     den_iv = (mean(data.d[data.z .== 1]) - mean(data.d[data.z .== 0]))
-    te.iv =  num_iv / den_iv
+    te.iv_coeff =  num_iv / den_iv
 
     # direct/reduced form/itt estimator
     te.itt = num_iv
 
-    return te
+     # compliers
+    perc_comp = sum(data.c) ./ size(data,1)
+
+    return te, perc_comp
+
+end
+
+
 end # end of module

@@ -92,7 +92,11 @@ function simulate(n::Integer=1000, seed::Integer=350)
     lnw = lnwfun.(s, a, ϵ) # earnings
 
      # matrix of observables
-    return [lnw' z₁' z₂' z₃' s']
+    return [z₁' z₂' z₃' lnw' s']
+
+    #DataFrame
+    #return DataFrame(i = 1:n, z1 = z₁', z2 = z₂', z3 = z₃',
+    #                 s = convert(Array{Float64},s), lnw = convert(Array{Float64},lnw)')
 end
 
 

@@ -1,9 +1,11 @@
 module MyRegression
 
+using Parameters, LinearAlgebra, Distributions, LinearAlgebra, StatsBase, Random
+
 """
     Define the structure that contains beta coefficients and variance-covariance matrix.
 """
-struct OLSprimitive
+@with_kw mutable struct OLSprimitive
     β::Vector{Float64} # regression coefficients
     V::Matrix{Float64} # variance-covariance matrix 
 end
@@ -11,7 +13,7 @@ end
 """
     Define the structure that contains beta coefficients and variance-covariance matrix.
 """
-struct TSLSprimitive
+@with_kw struct TSLSprimitive
     β::Vector{Float64} # regression coefficients
     V::Matrix{Float64} # variance-covariance matrix 
     Fstat::Float64 # F-test statistic
@@ -43,7 +45,7 @@ function ols(Y::Vector{Float64}, X::Array{Float64}; intercept::Bool = true)
     V = inv(X'X).*Ω
 
     # return the point estimates and variance-covariance matrix
-    return OLSprimitive(β=β, V=V)
+    return OLSprimitive(β, V)
 end    # end of OLS function
 
 
@@ -68,7 +70,7 @@ function tsls(Y::Vector{Float64}, X::Array{Float64}, Z::Array{Float64};
         X = [ones(nᵢ, 1) X]
     end
 
-    # adjust Z to include all exogenous variables
+    #Z includes all exogenous variables
     Z = [Z X[:, setdiff(1:p, 1 + intercept)]]
 
     # compute beta coefficients
@@ -78,19 +80,21 @@ function tsls(Y::Vector{Float64}, X::Array{Float64}, Z::Array{Float64};
     Ω = (Y - X*β)'*(Y - X*β)/(size(Y, 1) - size(X, 2))
     V = inv(X'Z*inv(Z'Z)*Z'X).*Ω 
 
+    #########################################################
     # compute the F statistic from the first-stage regression
-    X = X[:, 1 + intercept] # remove the intercept
     Z_ = X[:, setdiff(1:p, 1 + intercept)] # remove the covariate = X? or z
+    X = X[:, 1 + intercept] # remove the intercept
 
-    reg = ols(X_, Z; intercept=false) 
-    σ¹ = (X_ - Z*reg.β)' * (X_ - Z*reg.β) # residual variance
+    reg = ols(X, Z; intercept=false) 
+    σ = (X - Z*reg.β)' * (X - Z*reg.β) # residual variance
 
-    reg = ols(X_, Z_; intercept=false) 
-    σᶜ = (X_ - Z_*reg.β)' * (X_ - Z_*reg.β) # residual variance
+    reg = ols(X, Z_; intercept=false) 
+    σ₂ = (X - Z_*reg.β)' * (X - Z_*reg.β) # residual variance
 
-    F = ((σᶜ - σ¹) * (nᵢ - k_)) / ( k* σ¹) # F-statistic
 
-    return TSLSprimitive(β=β, V=V, Fstat=F)
+    F = ((σ₂ - σ) * (nᵢ - k+1)) / ( (k)* σ) # F-statistic
+
+    return TSLSprimitive(β, V, F)
 
 
 end # 2SLS()
