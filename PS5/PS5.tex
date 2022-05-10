@@ -30,7 +30,7 @@
 \setlength{\parskip}{0.8em}
 \usepackage{setspace}
 %\singlespacing
-\spacing{1.08}
+\spacing{1.15}
 
 
 
@@ -51,7 +51,7 @@
 
 \maketitle
 
- Tables with standards errors are provided for all regressions and other relevant analyses that I discuss. All the Stata code pertinent to this assignment is attached. 
+ Tables with standard errors are provided for all regressions and other relevant analyses that I discuss. All the Julia code pertinent to this assignment is attached. 
  
  \subsection*{Part 1: Analytic exercises}
  
@@ -105,7 +105,7 @@ $$
       \end{align*}
       $$$$
        
-    \item[(f)] ATEU > ATET because $TE = 1-0.5A$ is decreasing in $A$; in words, education (treatment) will have a greater effect in the earning of individuals with low ability. Individuals with high ability will have a relatively high earning with or without education. 
+    \item[(f)] ATEU > ATET because $TE = 1-0.5A$ is decreasing in $A$; in words, education (treatment) will have a greater effect on the earnings of individuals with low ability. Individuals with high ability will have relatively high earnings with or without education. 
     
     \item[(g)] The OLS estimand for the effect of $D$ on $Y$ is
     \begin{align*}
@@ -115,7 +115,7 @@ $$
                    &= 1.125
     \end{align*}
     
-    \item[(h)] The OLS estimand is biased upward for the ATE because treatment is not random but biased towards those with a higher ability. More formally, selection into treatment requires a higher ability, thus conditional independence fails.
+    \item[(h)] The OLS estimand is biased upward for the ATE because treatment is not random but biased towards those with higher ability. More formally, selection into treatment requires a higher ability, thus conditional independence fails.
 
    \end{itemize}
    
@@ -182,7 +182,7 @@ $$
              \mathbb{P}(D=1|Z=0) &= \mathbb{P}(Type 1)\mathbb{P}(U_V>0) + \mathbb{P}(Type 2)\mathbb{P}(U_V>0)\\
              &=0.3*\frac{1}{2}+0.7*\frac{1}{2} = \frac{1}{2}
         \end{itemize}
-        \item[(c)] LATE is same as ATE. See that $Z$ and $U_V$ does not affect the treatment effect of any of the two groups. Compliers are $U_V \leq 0$ for the two types. More formally:
+        \item[(c)] LATE is same as ATE. See that $Z$ and $U_V$ doe not affect the treatment effect of any of the two groups. Compliers are $U_V \leq 0$ for the two types. More formally:
                         \begin{align*}
              LATE &= \mathbb{E}[\Delta|U_V<0] = \mathbb{P}(Type 1)\mathbb{E}[\Delta|Type 1,U_V<0] + \mathbb{P}(Type 2)\mathbb{E}[\Delta|Type 2,U_V<0]\\
              &= \mathbb{P}(Type 1)\mathbb{E}[\Delta|Type 1] + \mathbb{P}(Type 2)\mathbb{E}[\Delta|Type 2]\\
@@ -193,7 +193,83 @@ $$
  \subsection*{Part 2: Monte Carlo exercises}
  
     \noindent \hspace{0.41cm} \textbf{Question 1.}  
-     
-    \noindent \hspace{0.41cm} \textbf{Question 2.}  
+    Assume log hourly earnings for individual $i$ takes this form:
+$$
+\ln w_{i}=1+0.05 s_{i}+0.1 a_{i}+\epsilon_{i}
+$$
+where $s_{i}$ is units of observed schooling and $a_{i}$ is unobserved ability. $\epsilon_{i} \sim$ $N(0,0.5) . a_{i} \sim N(0,4)$
+Units of schooling for each individual $i$ are
+$$
+s_{i}=3 a_{i}+z_{i 1}+z_{i 2}+\eta_{i}
+$$
+where $\eta_{i} \sim N(0,1) . z_{i 1}$ and $z_{i 2}$ reflect the cost of schooling for individual $i$. $z_{i 1} \sim N(0,0.1) . z_{i 2} \sim N(0,25)$. There is another variable $z_{3 i}$ which is distributed Uniform $[0,1] . z_{1 i}, z_{2 i}, z_{3 i}$ are all independent of each other, and independent of $\eta_{i}, a_{i}, \epsilon_{i}$.
+
+\textit{Solution:}
+The code that simulates data is in $Model1.jl$. For question b) you can refer to table 1 in the table below. 
+
+The instrument $z_1$ affects wages, so it is a relevant instrument. , though has a very small variance so it is a weak instrument. The instrument $z_2$ is relevant and it is a strong instrument with a lot of variation. The instrument $z_3$ is not relevant, it does not have any impact on wages. 
+All instruments are exogenous, that is, if anything, they do not affect wages through any variable other than schooling. 
+
+The schooling coefficient, $\beta_2$ is biased upwards, but it is pretty close taking into account that there is endogeneity. The explanation above about the instruments explain many of the results we see in the table. The coefficient of the iv with the first instrument is not significant which is expected, and the coefficient is very far from the true effect. Surprisingly, the results with $z_3$ are not as far from the real parameter (half) and it is significant. Anything that involves the valid instrument $z_2$ is a good estimate. Looking at the F statistic, we see that the strong set of instruments is those that include $z_2$. The highest F-statistics is attained with only the second instrument. Similar results but with better estimates are obtained by repeating the exercise with more observations. 
+    \begin{table}
+    \centering
+\begin{tabular}{r|rrrrrrrr}
+\hline
+ & OLS & IV1 & IV2 & IV3 & IV12 & IV13 & IV23 & IV123\\
+\hline
+N=2000 & & & & & & & & \\
+
+ & 0.0001915 & 39.6 & 0.0002082 & 0.0005187 & 0.000208 & 0.000521 & 0.0002082 & 0.000208\\
+intercept & 0.9778 & 0.8368 & 0.9773 & 0.9758 & 0.9773 & 0.9758 & 0.9773 & 0.9773\\
+ & 2.705e-7 & 8644.0 & 3.698e-7 & 0.0006591 & 3.691e-7 & 0.000662 & 3.697e-7 & 3.691e-7\\
+schooling & 0.05616 & -2.07 & 0.04932 & 0.02591 & 0.04936 & 0.02581 & 0.04932 & 0.04936\\
+F stat & - & 0.0005234 & 7769.0 & 2.213 & 3901.0 & 1.106 & 3883.0 & 2599.0\\
+\hline
+N=50000 & & & & & & & & \\
+ & 7.608e-7 & 7.96e-7 & 8.204e-7 & 4.381e-5 & 8.204e-7 & 8.022e-7 & 8.204e-7 & 8.204e-7\\
+intercept & 1.001 & 1.001 & 1.0 & 1.002 & 1.0 & 1.001 & 1.0 & 1.0\\
+ & 9.904e-10 & 3.996e-5 & 1.316e-9 & 0.05244 & 1.316e-9 & 3.99e-5 & 1.316e-9 & 1.316e-9\\
+schooling & 0.05624 & 0.05871 & 0.05001 & 0.1335 & 0.05001 & 0.05942 & 0.05001 & 0.05001\\
+F stat & - & 12.55 & 2.155e6 & 0.1233 & 1.078e6 & 6.332 & 1.077e6 & 718400.0\\
+\hline
+
+\end{tabular}
+\end{table}
+
+\vspace{0.2cm}
+\noindent \hspace{0.41cm} \textbf{Question 2.} 
+    
+Consider the following potential outcomes model:
+$$
+\begin{gathered}
+Y_{0}=1+U_{0} \\
+Y_{1}=4+U_{1} \\
+V=-1+2 Z+U_{V}
+\end{gathered}
+$$
+with $\left(U_{0}, U_{1}, U_{V}\right) \sim N(0, \Sigma)$, and $\Sigma$ corresponding to the following variancecovariance elements: $V\left(U_{0}\right)=1, V\left(U_{1}\right)=1, V\left(U_{V}\right)=1, \operatorname{Cov}\left(U_{0}, U_{1}\right)=0.5$, $\operatorname{Cov}\left(U_{0}, U_{V}\right)=0.3$, and $\operatorname{Cov}\left(U_{1}, U_{V}\right)=0.7$. $Z$ is a valid instrument with $Z \in\{0,1\}$, and $\operatorname{Pr}(Z=1)=0.3$.
+
+
+\textit{Solution:}
+The code that simulates data is in $Model2.jl$ (a).
+
+Below I show a table with the solutions to questions (b), (c), and (d). 
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\hline
+             & b) & d) \\ \hline
+ATE          &  2.951  & 2.951   \\ 
+ATET         &  3.176  & 3.131   \\
+ATEU         &  2.826  &  2.831  \\ 
+OLS          &  3.592   & 3.434   \\
+ITT          &  1.979 &  2.356  \\ 
+IV           & 2.950 &  2.915  \\ 
+\% compliers c) & 0.69   &  0.82   \\ \hline
+\end{tabular}
+\end{table}
+
+
     
 \end{document}
