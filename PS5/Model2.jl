@@ -102,7 +102,7 @@ end
 treatmente_ffects(data)
 
     Calculate ATE, ATET, ATEU, ols,direct/reduced reform/itt and iv. 
-    Returns a struct TreatmentEffect with the results.
+    Returns a struct TreatmentEffect with the results, and a Float with the percent of compliers. 
 
     # Arguments:
         - data: DataFrame with the simulated data.
