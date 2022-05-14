@@ -16,7 +16,7 @@
 module BankSearchModel
 
 # importing libraries
-using Parameters, DataFrames, LinearAlgebra, Distributions, LinearAlgebra, StatsBase, Random
+using Parameters, DataFrames, LinearAlgebra, Distributions, LinearAlgebra, StatsBase, Random, Optim
 
 
 @with_kw struct Primitives
@@ -26,8 +26,8 @@ using Parameters, DataFrames, LinearAlgebra, Distributions, LinearAlgebra, Stats
     μₓ::Float64 = 1/λ  # mean of X, creditworthiness  
     xdist::Exponential{Float64} = Exponential{Float64}(μₓ) # distribution of X, creditworthiness
     # true observed parameters from valuation of individuals
-    v₁::Float64 = 10 # valuation from bank 1
-    v₂::Float64 = 8 # valuation from bank 2
+    v₁::Float64 = 20 # valuation from bank 1
+    v₂::Float64 = 18# valuation from bank 2
     
     # population percent in bank 1 and 2
     p::Float64 = 0.5 # percent of population in bank 1
@@ -44,9 +44,9 @@ using Parameters, DataFrames, LinearAlgebra, Distributions, LinearAlgebra, Stats
     β₂::Float64 = round(rand(β₂dist),digits = 2) # coefficient creditwordiness bank 2
 
     # unknown mutable parameters from error term
-    σ₁::Float64 = 1 # variance of price of bank 1
-    σ₂::Float64 = 1 # variance of price of bank 2
-    ρ::Float64  = 0.5 # correlation coefficient between price of bank 1 and price of bank 2
+    σ₁::Float64 = 0.5 # variance of price of bank 1
+    σ₂::Float64 = 0.5 # variance of price of bank 2
+    ρ::Float64  = 0.2 # correlation coefficient between price of bank 1 and price of bank 2
     Σ::Array{Float64, 2} = [σ₁ ρ*σ₁*σ₂; ρ*σ₁*σ₂ σ₂] # covariance matrix
     ϵdist::MvNormal{Float64} = Distributions.MvNormal([0,0], Σ)
     
@@ -55,8 +55,6 @@ using Parameters, DataFrames, LinearAlgebra, Distributions, LinearAlgebra, Stats
 
 end
 
-
-q = Primitives(σ₁ = 0.5, k = 5)
 
     """
     simulate(θ,1000)
@@ -121,8 +119,7 @@ function simulate(prims::Primitives;  n::Integer = 1000, seed::Integer = 350)
     p = p₁ .* b .+ p₂ .* (1 .- b)
 
     # returning DataFrame of simulated data
-    data = DataFrame(i = 1:n,
-                    x = x,
+    data = DataFrame(x = x,
                     d = d,
                     h = h,
                     c = c,
@@ -135,5 +132,113 @@ function simulate(prims::Primitives;  n::Integer = 1000, seed::Integer = 350)
     return data
 end
 
-simulate(q,n = 100000)
+
+
+"""
+    get_moments(data::DataFrame)
+
+    Compute the moments from the data.
+
+    # Arguments: 
+        - data: a DataFrame with the data.
+
+"""
+function get_moments(data::DataFrame; filter = [1,2,3,4])
+    # computing the moments from data
+
+    g = [ mean(data.d .== 1), # E[d]
+          mean(data.c .==1) ,#E[c]
+          mean(data.d[data.b .== 1]), # E[d|b=1]
+          mean(data.d[data.b .== 0]), # E[d|b=0]
+          mean(data.c[data.b .== 1]), # E[c|b=1]
+          mean(data.c[data.b .== 0]), # E[c|b=0]
+          mean(data.p), # E[p]
+          mean(data.b),  # percent of population that chose bank 1
+          mean(data.p[data.d .== 0]), # E[p|d=0] # mean of prices when search
+          mean(data.p[data.d .== 1]), # E[p|d=1] # mean of prices when no search
+          mean(data.p[data.c .== 0]), # E[p|c=0] # mean price homebank when change
+          mean(data.p[data.c .== 1]), # E[p|c=1] # mean price other bank when change
+          var(data.p[data.d .== 0]), # V[p|d=0] # variance price when search
+          var(data.p[data.d .== 1]), # V[p|d=1] # variance price bank when search
+          var(data.p[data.c .== 0]), # V[p|c=0] # variance price homebank when no change
+          var(data.p[data.c .== 1]), # V[p|c=1] # variance price other bank when change
+          mean(data.p[data.b .== 1]), # E[p1] # mean price bank 1 (observables only)
+          mean(data.p[data.b .== 0]), # E[p2] # mean price bank 2 (observables only)
+          var(data.p[data.b .== 1]), # V[p1] # variance price bank 1 (observables only)
+          var(data.p[data.b .== 0]), # V[p2] # variance price bank 2 (observables only)
+    ]
+    return g[filter]
 end
+
+"""
+    simulated_method_moments_objective()
+
+    Objective function that compares simulated moments with moments passed in arguments.
+    The vector of parameters is (π₁, π₂, μ₁, μ₂, σ₁, σ₂, ρ).
+
+    # Arguments:
+        - θ: a vector containing the true parameters
+        - ĝ: a vector containing the data moments
+        - n: number of individuals to simulate
+        - weights: a matrix of weights for the moments
+
+"""
+function simulated_method_moments_objective(θ₀::Vector{Float64}, 
+        θ₁::Vector{Float64},
+        ĝ::Vector{Float64};
+        n::Int64 = 100000,  
+        filter = [1,2,3,4],
+        weights::Matrix{Float64} = 1.0*Matrix(I, length(filter), length(filter)))
+
+    # positive variance
+    if θ₁[1] <= 0 return Inf end
+
+    # creating primitive from params
+    prim = Primitives(α₁ = θ₀[1], β₁ = θ₀[2], α₂ = θ₀[3], β₂ = θ₀[4], 
+                       k = θ₁[1])
+    # compute observed moments from argument data
+    g = get_moments(simulate(prim, n=n), filter = filter)
+    # adjusting weight matrix
+    for i in 1:length(ĝ) weights[i,i] = 1\ĝ[i] end
+    # objective function
+    return (g - ĝ)'*weights*(g - ĝ)
+end
+
+
+""" 
+    simulated_method_moments(data)
+
+    Estimate the parameters of the model using simulated moments, optimzing the objective function.
+
+    # Arguments:
+        - data: a DataFrame with the data.
+        - θ₂: the true known parameters.
+"""
+function simulated_method_moments(data::DataFrame, 
+                                  θ₀::Vector{Float64},
+                                  initial_guess::Vector{Float64},
+                                  lower::Vector{Float64}, 
+                                  upper::Vector{Float64};
+                                  filter = [1,2,3,4])
+    
+    ĝ = get_moments(data, filter = filter)
+
+    # simulate moments 
+
+
+    result = optimize(θ₁ -> simulated_method_moments_objective(θ₀, θ₁, ĝ, filter = filter),
+            lower, 
+            upper,
+            initial_guess,
+            NelderMead(),
+            Optim.Options(g_tol = 1e-12, iterations = 100000))
+            #,Fminbox(GradientDescent()),
+            #Optim.Options(g_tol = 1e-12, iterations = 5000))
+
+    return result.minimizer
+end
+
+
+
+
+end # module
