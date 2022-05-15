@@ -108,9 +108,12 @@ function simulate(prims::Primitives;  n::Integer = 1000, seed::Integer = 350)
 
     # if homebank is not optimal h = 1, if it is optimal h = 0
     h = u₁.*z .+ u₂.*(1 .- z) .<= u₁.*(1 .- z) .+ u₂.*z .- k
+    
+    # if homebank is not expost optimal e = 1, if it is optimal e = 0 # k does not matter
+    e = u₁.*z .+ u₂.*(1 .- z) .<= u₁.*(1 .- z) .+ u₂.*z 
 
     # change banks c = 1 if change bank, c = 0 if no change bank. change when search, and search is optimal.
-    c = d .* h
+    c = d .* e # here should not be h! should be hhigher  utility, expost efficiency e!
 
     # choice bank b is 1 if bank 1 is the choice bank and 0 if bank 2 is the choice bank
     b = z .* (1 .- c) .+ (1 .- z) .* c
@@ -152,6 +155,10 @@ function get_moments(data::DataFrame; filter = [1,2,3,4])
           mean(data.d[data.b .== 0]), # E[d|b=0]
           mean(data.c[data.b .== 1]), # E[c|b=1]
           mean(data.c[data.b .== 0]), # E[c|b=0]
+          mean(data.d[data.z .== 1]), # E[d|z=1]
+          mean(data.d[data.z .== 0]), # E[d|z=0]
+          mean(data.c[data.z .== 1]), # E[c|z=1]
+          mean(data.c[data.z .== 0]), # E[c|z=0]
           mean(data.p), # E[p]
           mean(data.b),  # percent of population that chose bank 1
           mean(data.p[data.d .== 0]), # E[p|d=0] # mean of prices when search
@@ -186,7 +193,7 @@ end
 function simulated_method_moments_objective(θ₀::Vector{Float64}, 
         θ₁::Vector{Float64},
         ĝ::Vector{Float64};
-        n::Int64 = 100000,  
+        n::Int64 = 10000,  
         filter = [1,2,3,4],
         weights::Matrix{Float64} = 1.0*Matrix(I, length(filter), length(filter)))
 
@@ -195,7 +202,7 @@ function simulated_method_moments_objective(θ₀::Vector{Float64},
 
     # creating primitive from params
     prim = Primitives(α₁ = θ₀[1], β₁ = θ₀[2], α₂ = θ₀[3], β₂ = θ₀[4], 
-                       k = θ₁[1])
+                        k = θ₁[1])
     # compute observed moments from argument data
     g = get_moments(simulate(prim, n=n), filter = filter)
     # adjusting weight matrix
@@ -215,18 +222,19 @@ end
         - θ₂: the true known parameters.
 """
 function simulated_method_moments(data::DataFrame, 
-                                  θ₀::Vector{Float64},
-                                  initial_guess::Vector{Float64},
-                                  lower::Vector{Float64}, 
-                                  upper::Vector{Float64};
-                                  filter = [1,2,3,4])
+                                    θ₀::Vector{Float64},
+                                    initial_guess::Vector{Float64},
+                                    lower::Vector{Float64}, 
+                                    upper::Vector{Float64};
+                                    n::Int64 = 10000,
+                                    filter = [1,2,3,4])
     
     ĝ = get_moments(data, filter = filter)
 
     # simulate moments 
 
 
-    result = optimize(θ₁ -> simulated_method_moments_objective(θ₀, θ₁, ĝ, filter = filter),
+    result = optimize(θ₁ -> simulated_method_moments_objective(θ₀, θ₁, ĝ, n = n, filter = filter),
             lower, 
             upper,
             initial_guess,
